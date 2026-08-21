@@ -19,4 +19,32 @@ router.post('/registrati', async (req, res) => {
   }
 });
 
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const utente = await Utente.findOne({ email });
+    if (!utente) {
+      return res.status(401).json({ errore: 'Credenziali non valide' });
+    }
+    const passwordCorretta = await bcrypt.compare(password, utente.password);
+    if (!passwordCorretta) {
+      return res.status(401).json({ errore: 'Credenziali non valide' });
+    }
+    const token = jwt.sign(
+      { id: utente._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    res.json({
+      token,
+      utente: { id: utente._id, nome: utente.nome, email: utente.email },
+    });
+  } catch (err) {
+    res.status(500).json({ errore: err.message });
+  }
+});
+
 module.exports = router;
